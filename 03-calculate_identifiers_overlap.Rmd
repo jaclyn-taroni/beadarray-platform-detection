@@ -78,6 +78,7 @@ master.list <- list()
 # had *non* data available for each platform
 non.df <- data.frame(matrix(ncol = 2, nrow = length(platforms)))
 colnames(non.df) <- c("platform", "num_accessions")
+non.df$platform <- platforms
 for (plt in platforms) {
   
   # list to hold all the stats for each file of the platform under 
