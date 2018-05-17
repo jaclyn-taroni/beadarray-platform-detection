@@ -1,0 +1,112 @@
+---
+title: "Select Illumina human series for testing"
+output: html_notebook
+---
+
+**J. Taroni 2018**
+
+We'd like to try out some heuristics for automatically detecting platforms from
+the probe identifiers. 
+We'll need to sample the available series to see what's available in GEO.
+
+Important limitations:
+
+* Human only
+* GEO only (i.e., no ArrayExpress)
+* Only popular/official GPLs -- so we're not necessarily getting into weeds of
+what's out there at this point
+* Whole genome only at this point -- we'll need to add "Ref" platforms to fully
+test out our ideas
+
+```{r}
+`%>%` <- dplyr::`%>%`
+# directory that contains the list of series for each platform
+series.dir <- file.path("data", "series_lists")
+files <- list.files(series.dir, full.names = TRUE)
+```
+
+We'll grab 30 series from each of the 4 Illumina Human (whole genome) platforms.
+
+```{r}
+GetSampleSeriesDF <- function(filename, seed = 12345, n = 30) {
+  set.seed(seed)
+  df <- readr::read_tsv(filename)
+  # only want things with supplemental files, drop methylation (IDAT) 
+  # found some instances of CEL files, so restrict to TXT
+  filt.df <- df %>%
+    dplyr::filter(`Supplementary Types` == "TXT")
+  sample.index <- sample(x = 1:nrow(filt.df), size = n)
+  sampled.df <- filt.df[sample.index, ]
+}
+```
+
+```{r}
+set.seed(5)
+seeds <- sample(1:10000, length(files))
+```
+
+```{r}
+sample.df.list <- list()
+for (seed.index in seq_along(seeds)) {
+  fl <- files[seed.index]
+  sample.df.list[[fl]] <- GetSampleSeriesDF(filename = fl, 
+                                            seed = seeds[seed.index])
+}
+```
+
+```{r}
+lapply(sample.df.list, dim)
+```
+
+```{r}
+dir.create("results") 
+```
+
+```{r}
+for (list.index in seq_along(sample.df.list)) {
+  new.fl <- file.path("results", 
+                      sub("data/series_lists", "", 
+                          sub("series.tsv", "series_sampled.tsv", 
+                              names(sample.df.list)[list.index])))
+  readr::write_tsv(sample.df.list[[list.index]], path = new.fl)
+  # if there are any "non-normalized" files... we're gonna want to wget them
+  urls <- paste(sample.df.list[[list.index]]$`Supplementary Links`,
+                 "*non*", sep = "/")
+  readr::write_lines(urls, path = sub("sampled.tsv", "urls", new.fl))
+}
+```
+
+```{bash}
+# Human-6 v1
+mkdir -p data/series_non-normalized/GPL2507
+FILE="results/GPL2507_series_urls"
+while IFS=' ' read -r url
+do
+  wget --directory-prefix="data/series_non-normalized/GPL2507" $url
+done < "$FILE"
+
+# Human-6 v2
+mkdir -p data/series_non-normalized/GPL6102
+FILE="results/GPL6102_series_urls"
+while IFS=' ' read -r url
+do
+  wget --directory-prefix="data/series_non-normalized/GPL6102" $url
+done < "$FILE"
+
+# HumanHT-12 v3
+mkdir -p data/series_non-normalized/GPL6947
+FILE="results/GPL6947_series_urls"
+while IFS=' ' read -r url
+do
+  wget --directory-prefix="data/series_non-normalized/GPL6947" $url
+done < "$FILE"
+
+# HumanHT-12 v4
+mkdir -p data/series_non-normalized/GPL10558
+FILE="results/GPL10558_series_urls"
+while IFS=' ' read -r url
+do
+  wget --directory-prefix="data/series_non-normalized/GPL10558" $url
+done < "$FILE"
+```
+
