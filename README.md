@@ -1,0 +1,1 @@
+# beadarray-platform-detection
