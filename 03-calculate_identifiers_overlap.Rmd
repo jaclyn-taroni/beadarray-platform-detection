@@ -1,0 +1,207 @@
+---
+title: "Calculate overlap between non-normalized IDs and probe IDs"
+output: html_notebook
+---
+
+**J. Taroni 2018**
+
+### Functions
+
+```{r}
+`%>%` <- dplyr::`%>%`
+```
+
+```{r}
+PercWrapper <- function(identifiers, illumina.probes) {
+  # Given a set of identifiers in a non-normalized data file and a set of
+  # Illumina probe identifiers from an "illumina.db" bioconductor package,
+  # calculate: 1) the percent of the data identifiers that are in the 
+  # set of probes and 2) the percent of probes in the data identifiers
+  # returns a list with those two elements
+  
+  # internal helper functions
+  PercentIDinProbes <- function(ids, probes) {
+    sum(ids %in% probes) / length(ids)
+  }
+  
+  PercentProbesinIDs <- function(ids, probes) {
+    sum(probes %in% ids) / length(probes)
+  }
+  
+  return.list <- list()
+  return.list[["percent_ids_in_probes"]] <- PercentIDinProbes(identifiers, 
+                                                              illumina.probes)
+  return.list[["percent_probes_in_ids"]] <- PercentProbesinIDs(identifiers,
+                                                               illumina.probes)
+  return(return.list)
+}
+
+CalcProbeOverlap <- function(filename, probes.list) {
+  # read in the non-normalized data.frame from filename and calculate
+  # percentage information for each of the platforms represented in 
+  # probes.list
+  
+  # there are weird things in headers, this is an ugly solution!
+  # lines as part of a large character vector
+  scanned.lines <- scan(filename, what = "", sep = "\n")
+  id.line <- grep("ID", scanned.lines)
+  # in case some of the gene/probe identifiers contain "ID" take the first one
+  id.line <- id.line[1]
+  
+  # skipping the header marked with "#"
+  df <- readr::read_tsv(filename, skip = (id.line - 1), progress = FALSE)
+  # take the first column as the identifiers, no matter what, oof
+  dat.identifiers <- df[[1]]
+  
+  lapply(probes.list, function (x) PercWrapper(dat.identifiers, x))
+  
+}
+```
+
+### Read in data and calculate overlap
+
+```{r}
+# read in the list of probes from the annotation packages
+probes.list <- readRDS(file.path("results", "illumina_human_probes.RDS"))
+```
+
+```{r}
+# four platforms from GEO under consideration
+# v1, v2, v3, and v4, respectively
+platforms <- c("GPL2507", "GPL6102", "GPL6947", "GPL10558")
+```
+
+```{r}
+# initialize list to hold all the % results from all 4 platforms
+master.list <- list()
+# we're also going to make a table that tells us how many accessions actually
+# had *non* data available for each platform
+non.df <- data.frame(matrix(ncol = 2, nrow = length(platforms)))
+colnames(non.df) <- c("platform", "num_accessions")
+for (plt in platforms) {
+  
+  # list to hold all the stats for each file of the platform under 
+  # consideration
+  plt.list <- list()
+  
+  # non-normalized data files for this platform
+  raw.directory <- file.path("data", "series_non-normalized", plt)
+  raw.files <- list.files(raw.directory, full.names = TRUE)
+  
+  # some accessions have more than one non-normalized file, don't want
+  # to overwrite stats
+  accessions <- sub("_.*", "", sub(".*\\/", "", raw.files))
+  num.unique.acc <- length(unique(accessions))
+  accessions <- make.unique(accessions)
+  
+  non.df[which(non.df$platform == plt), "num_accessions"] <- num.unique.acc
+  
+  # for each file, calculate the stats!
+  for(fl.iter in seq_along(raw.files)) {
+    series.accession <- accessions[fl.iter]
+    fl.perc <- try(CalcProbeOverlap(filename = raw.files[fl.iter], 
+                                    probes.list = probes.list))
+    plt.list[[series.accession]] <- fl.perc
+  }
+  
+  master.list[[plt]] <- plt.list
+}
+
+# write number of accession df to file
+readr::write_tsv(non.df, file.path("results", "num_accessions_with_raw.tsv"))
+```
+
+```{r}
+# remove any try errors
+which(unlist(lapply(master.list, function(x) lapply(x, class))) == "try-error")
+```
+
+```{r}
+master.list$GPL10558$GSE61397 <- NULL
+```
+
+### Analysis
+
+```{r}
+# get data in long format for plotting & summarizing
+master.df <- reshape2::melt(master.list)
+colnames(master.df) <- c("value", "metric", "bioc_package", 
+                         "series_accesssion", "geo_gpl")
+# reorder geo_gpl to reflect version numbers
+master.df$geo_gpl <- factor(master.df$geo_gpl, levels = platforms)
+# drop underscores from the metric column
+master.df$metric <- gsub("_", " ", master.df$metric)
+```
+
+```{r}
+dplyr::filter(master.df) %>%
+  ggplot2::ggplot(ggplot2::aes(x = bioc_package,
+                               y = value)) +
+  ggplot2::geom_jitter(alpha = 0.3, width = 0.2) +
+  ggplot2::facet_wrap(geo_gpl ~ metric, ncol = 2) +
+  ggplot2::theme_bw() +
+  ggplot2::labs(x = "Bioconductor package", y = "% Overlap",
+                title = "Illumina Human Whole Genome")
+```
+
+```{r}
+ggplot2::ggsave(file.path("plots", "probe_id_overlap_jitter.png"), 
+                width = 8, height = 14, unit = "in")
+```
+
+```{r}
+# reorder and then write to file
+master.df <- master.df[, c("series_accesssion", "geo_gpl", "bioc_package", 
+                           "metric", "value")]
+readr::write_tsv(master.df, path = file.path("results", 
+                                             "probe_id_overlap.tsv"))
+```
+
+```{r}
+# what are the median values?
+summary.df <- master.df %>%
+                dplyr::group_by(geo_gpl, bioc_package, metric) %>%
+                dplyr::summarise(median = median(value))
+readr::write_tsv(summary.df, 
+                 file.path("results", "probe_id_overlap_summary.tsv"))
+# divide up data.frames by metric
+id.df <- summary.df %>% 
+            dplyr::filter(metric == "percent ids in probes")
+probes.df <- summary.df %>%
+                dplyr::filter(metric == "percent probes in ids")
+```
+
+```{r}
+# reshape into matrices for heatmap purposes
+id.mat <- reshape2::acast(id.df, geo_gpl ~ bioc_package, 
+                          value.var = "median")
+probes.mat <- reshape2::acast(probes.df, geo_gpl ~ bioc_package, 
+                              value.var = "median")
+```
+
+```{r}
+# heatmaps themselves!
+# ids
+png(file.path("plots", "ids_heatmap.png"), width = 7, height = 7,
+    units = "in", res = 600)
+pheatmap::pheatmap(id.mat, cluster_rows = FALSE, 
+                   cluster_cols = FALSE,
+                   color = colorRampPalette(c("#FFFFFF", "#FF0000"))(25),
+                   border_color = "#000000",
+                   display_numbers = TRUE, 
+                   fontsize_number = 10,
+                   main = "Median % IDs in Probes")
+dev.off()
+# probes
+png(file.path("plots", "probes_heatmap.png"), width = 7, height = 7, 
+    units = "in", res = 600)
+pheatmap::pheatmap(probes.mat, cluster_rows = FALSE, 
+                   cluster_cols = FALSE,
+                   color = colorRampPalette(c("#FFFFFF", "#FF0000"))(25),
+                   border_color = "#000000",
+                   display_numbers = TRUE, 
+                   main = "Median % Probes in IDs")
+dev.off()
+```
+
+
