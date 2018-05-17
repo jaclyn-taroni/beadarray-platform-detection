@@ -1,0 +1,57 @@
+---
+title: "Get lists of probes!"
+output: html_notebook
+---
+
+**J. Taroni 2018**
+
+Let's get the lists of probes from each of the following packages:
+`illuminaHumanv1.db`, `illuminaHumanv2.db`, `illuminaHumanv3.db`,
+`illuminaHumanv4.db`. (These need to be installed.)
+
+We'll store these lists and use them for comparison to the identifiers in the
+non-normalized data we obtained from GEO.
+
+```{r}
+GetILMNProbes <- function(shortname = "Humanv1") {
+  # Extract the Illumina probes (e.g., ILMN_XXXXX) from bioconductor package
+  # indicated by shortname; returns a character vector of the probe IDs
+  # "Humanv1" indicates "illuminaHumanv1.db"
+  require(AnnotationDbi)
+  # platform
+  platform <- paste0("illumina", shortname)
+  # get probe quality information object -- this was picked somewhat 
+  # arbitrarily, but we expect that every probe should be mapped in this case
+  pq <- lazyeval::lazy_eval(paste0(platform, ".db::", platform, "PROBEQUALITY"))
+  mapped <- AnnotationDbi::mappedkeys(pq)
+  mapped.list <- as.list(pq[mapped])
+  probes <- names(mapped.list)
+}
+```
+
+```{r}
+# all the human platforms under consideration
+platforms <- c("Humanv1", "Humanv2", "Humanv3", "Humanv4")
+probes.list <- lapply(platforms, GetILMNProbes)
+names(probes.list) <- platforms
+```
+
+```{r}
+lapply(probes.list, head)
+```
+
+```{r}
+# make a venn diagram, obviously
+# let's see how close it is to this: 
+# https://github.com/AlexsLemonade/refinebio/issues/232#issuecomment-389858227
+dir.create("plots")
+VennDiagram::venn.diagram(probes.list, 
+                          filename = file.path("plots", "probes_list_venn.png"),
+                          imagetype = "png")
+```
+
+```{r}
+# save the probes list
+saveRDS(probes.list, file.path("results", "illumina_human_probes.RDS"))
+```
+
