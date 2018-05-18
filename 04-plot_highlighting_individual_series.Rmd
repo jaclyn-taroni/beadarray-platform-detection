@@ -36,7 +36,7 @@ highlight.df <-
                       series_accession == "GSE35102" ~ "GSE35102",
                       series_accession == "GSE45331" ~ "GSE45331",
                       series_accession == "GSE25580" ~ "GSE25580 GPL6947",
-                      series_accession == "GSE25580.1" ~ "GSE25580 GPL6102",
+                      series_accession == "GSE25580.1" ~ "GSE25580 GPL6104",
                       series_accession %in% c("GSE34074", "GSE34074.1") ~ "GSE34074 GPL6947",
                       series_accession %in% c("GSE34074.2", "GSE34074.3", "GSE34074.4") ~ "GSE34074 GPL10558",
                       series_accession == "GSE62374" ~ "GSE62374", 
