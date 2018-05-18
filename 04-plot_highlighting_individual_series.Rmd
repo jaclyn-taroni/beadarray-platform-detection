@@ -1,0 +1,138 @@
+---
+title: "Plotting highlighting GEO Series that differ from expectations"
+output: html_notebook
+---
+
+There were some GEO Series that had overlap calculations that differed from
+what we would expect if they were entirely consistent with their platform
+labels. 
+We've manually inspected the results. 
+Here we're going to change the fill on the jitter plot to highlight these 
+accessions. 
+This will make presenting the results easier.
+
+### Read in data & mutate
+
+Overlaps have already been calculated.
+
+```{r}
+`%>%` <- dplyr::`%>%`
+overlap.df <- readr::read_tsv(file.path("results", "probe_id_overlap.tsv"))
+```
+
+Here are the accessions we'd like to highlight: `GSE17241`, `GSE14295`, 
+`GSE35102`, `GSE45331`, `GSE25580` `GSE34074`, `GSE62374`, `GSE39417`, 
+`GSE54661`
+
+```{r}
+highlight.df <- 
+  overlap.df %>%
+    dplyr::mutate(series = 
+                    dplyr::case_when(
+                      series_accession %in% c("GSE17241", "GSE17241.1") ~ "GSE17241 GPL2507",
+                      series_accession == "GSE17241.2" ~ "GSE17241 GPL6106",
+                      series_accession %in% c("GSE17241.3", "GSE17241.4") ~ "GSE17241 GPL6102",
+                      series_accession %in% c("GSE14295", "GSE14295.1") ~ "GSE14295",
+                      series_accession == "GSE35102" ~ "GSE35102",
+                      series_accession == "GSE45331" ~ "GSE45331",
+                      series_accession == "GSE25580" ~ "GSE25580 GPL6947",
+                      series_accession == "GSE25580.1" ~ "GSE25580 GPL6102",
+                      series_accession %in% c("GSE34074", "GSE34074.1") ~ "GSE34074 GPL6947",
+                      series_accession %in% c("GSE34074.2", "GSE34074.3", "GSE34074.4") ~ "GSE34074 GPL10558",
+                      series_accession == "GSE62374" ~ "GSE62374", 
+                      series_accession == "GSE39417" ~ "GSE39417",
+                      series_accession == "GSE54661" ~ "GSE54661",
+                      TRUE ~ "other"
+                    ))
+```
+
+### Plot
+
+```{r}
+set.seed(1234)  # for plot jitter
+```
+
+```{r}
+dplyr::filter(highlight.df, geo_gpl == "GPL2507") %>%
+  ggplot2::ggplot(ggplot2::aes(x = bioc_package,
+                               y = value,
+                               colour = series)) +
+  ggplot2::geom_jitter(alpha = 0.5, width = 0.2) +
+  ggplot2::facet_wrap(geo_gpl ~ metric, ncol = 2) +
+  ggplot2::theme_bw() +
+  ggplot2::scale_colour_manual(values = c(colorblindr::palette_OkabeIto[1:3],
+                                          "#000000")) +
+  ggplot2::labs(title = "Illumina Human Whole Genome BeadArray",
+                x = "Bioconductor package", y = "% Overlap") +
+  ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1,
+                                                     vjust = 0.5))
+```
+
+```{r}
+ggplot2::ggsave(file.path("plots", "GPL2507_jitter_highlight.png"),
+                          width = 7, height = 5)
+```
+
+
+```{r}
+dplyr::filter(highlight.df, geo_gpl == "GPL6102") %>%
+  ggplot2::ggplot(ggplot2::aes(x = bioc_package,
+                               y = value,
+                               colour = series)) +
+  ggplot2::geom_jitter(alpha = 0.5, width = 0.2) +
+  ggplot2::facet_wrap(geo_gpl ~ metric, ncol = 2) +
+  ggplot2::theme_bw() +
+  ggplot2::scale_colour_manual(values = c(colorblindr::palette_OkabeIto[1:3],
+                                          "#000000")) +
+  ggplot2::labs(title = "Illumina Human Whole Genome BeadArray",
+                x = "Bioconductor package", y = "% Overlap") +
+  ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1,
+                                                     vjust = 0.5))
+```
+
+```{r}
+ggplot2::ggsave(file.path("plots", "GPL6102_jitter_highlight.png"),
+                width = 7, height = 5)
+```
+
+```{r}
+dplyr::filter(highlight.df, geo_gpl == "GPL6947") %>%
+  ggplot2::ggplot(ggplot2::aes(x = bioc_package,
+                               y = value,
+                               colour = series)) +
+  ggplot2::geom_jitter(alpha = 0.5, width = 0.2) +
+  ggplot2::facet_wrap(geo_gpl ~ metric, ncol = 2) +
+  ggplot2::theme_bw() +
+  ggplot2::scale_colour_manual(values = c(colorblindr::palette_OkabeIto[1:4],
+                                          "#000000")) +
+  ggplot2::labs(title = "Illumina Human Whole Genome BeadArray",
+                x = "Bioconductor package", y = "% Overlap") +
+  ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1,
+                                                     vjust = 0.5))
+```
+
+```{r}
+ggplot2::ggsave(file.path("plots", "GPL6947_jitter_highlight.png"),
+                width = 7, height = 5)
+```
+
+```{r}
+dplyr::filter(highlight.df, geo_gpl == "GPL10558") %>%
+  ggplot2::ggplot(ggplot2::aes(x = bioc_package,
+                               y = value,
+                               colour = series)) +
+  ggplot2::geom_jitter(alpha = 0.5, width = 0.2) +
+  ggplot2::facet_wrap(geo_gpl ~ metric, ncol = 2) +
+  ggplot2::theme_bw() +
+  ggplot2::scale_colour_manual(values = c(colorblindr::palette_OkabeIto[1:3],
+                                          "#000000")) +
+  ggplot2::labs(title = "Illumina Human Whole Genome BeadArray",
+                x = "Bioconductor package", y = "% Overlap") +
+  ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1,
+                                                     vjust = 0.5))
+```
+
+```{r}
+ggplot2::ggsave(file.path("plots", "GPL10558_jitter_highlight.png"),
+                width = 7, height = 5)
+```
