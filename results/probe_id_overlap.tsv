@@ -1,4 +1,4 @@
-series_accesssion	geo_gpl	bioc_package	metric	value
+series_accession	geo_gpl	bioc_package	metric	value
 GSE15390	GPL2507	Humanv1	percent ids in probes	0.9999788538803129
 GSE15390	GPL2507	Humanv1	percent probes in ids	1
 GSE15390	GPL2507	Humanv2	percent ids in probes	0

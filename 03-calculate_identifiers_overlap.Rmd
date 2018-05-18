@@ -127,7 +127,7 @@ master.list$GPL10558$GSE61397 <- NULL
 # get data in long format for plotting & summarizing
 master.df <- reshape2::melt(master.list)
 colnames(master.df) <- c("value", "metric", "bioc_package", 
-                         "series_accesssion", "geo_gpl")
+                         "series_accession", "geo_gpl")
 # reorder geo_gpl to reflect version numbers
 master.df$geo_gpl <- factor(master.df$geo_gpl, levels = platforms)
 # drop underscores from the metric column
@@ -152,7 +152,7 @@ ggplot2::ggsave(file.path("plots", "probe_id_overlap_jitter.png"),
 
 ```{r}
 # reorder and then write to file
-master.df <- master.df[, c("series_accesssion", "geo_gpl", "bioc_package", 
+master.df <- master.df[, c("series_accession", "geo_gpl", "bioc_package", 
                            "metric", "value")]
 readr::write_tsv(master.df, path = file.path("results", 
                                              "probe_id_overlap.tsv"))
