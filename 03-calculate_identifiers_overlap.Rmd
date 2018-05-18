@@ -135,7 +135,7 @@ master.df$metric <- gsub("_", " ", master.df$metric)
 ```
 
 ```{r}
-dplyr::filter(master.df) %>%
+master.df %>%
   ggplot2::ggplot(ggplot2::aes(x = bioc_package,
                                y = value)) +
   ggplot2::geom_jitter(alpha = 0.3, width = 0.2) +
